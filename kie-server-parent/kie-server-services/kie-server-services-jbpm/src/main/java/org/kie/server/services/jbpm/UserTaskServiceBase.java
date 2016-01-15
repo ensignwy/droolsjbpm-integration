@@ -24,6 +24,7 @@ import org.jbpm.services.api.UserTaskService;
 import org.kie.api.task.model.Attachment;
 import org.kie.api.task.model.Comment;
 import org.kie.api.task.model.OrganizationalEntity;
+import org.kie.api.task.model.Status;
 import org.kie.api.task.model.Task;
 import org.kie.internal.identity.IdentityProvider;
 import org.kie.internal.task.api.TaskModelProvider;
@@ -83,9 +84,18 @@ public class UserTaskServiceBase {
 
     }
 
-    public void complete(String containerId, Number taskId, String userId, String payload, String marshallerType) {
+    public void complete(String containerId, Number taskId, String userId, boolean force, String payload, String marshallerType) {
 
         userId = getUser(userId);
+        
+        if (force) {
+            Task task = userTaskService.getTask(taskId.longValue());
+            if (task.getTaskData().getStatus() == Status.Reserved) {
+                logger.debug("About to force complete task by starting task with id '{}' as user '{}'", taskId, userId);
+                userTaskService.start(taskId.longValue(), userId);
+            }
+        }
+        
         logger.debug("About to unmarshal task outcome parameters from payload: '{}'", payload);
         Map<String, Object> parameters = marshallerHelper.unmarshal(containerId, payload, marshallerType, Map.class);
 
